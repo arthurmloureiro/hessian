@@ -107,7 +107,7 @@ int main(){
 
 	cout << "\t Calculating the second derivatives w.r.t. G" << endl;
 
-	matrixType secondDeriv(1, intPow(nbins, 4));
+	matrixType secondDerivG(1, intPow(nbins, 4));
 	matrixType numerical_G0(nbins,nbins);
 	
 	int index = 0;
@@ -131,7 +131,7 @@ int main(){
 					matrixType G3	=	perturb(G2, i, j, DeltaG);
 					double func3	=	neglnpost(a0, G3, x0, sigma0, invN0, Z0, L, q0);
 
-					secondDeriv(index) = (func3 - func2)/DeltaG;
+					secondDerivG(index) = (func3 - func2)/DeltaG;
 
 					index += 1;
 
@@ -141,17 +141,66 @@ int main(){
 		}
 	}
 
+	cout << "\t Calculating the second derivatives w.r.t. alms" << endl;
+
+	matrixType secondDerivA(1, intPow(nbins, 4));
+	matrixType numerical_a0(1, n);
+	matrixType numerical_a2(1, n);
+	matrixType Hessian_aa_Num(n,n);
+	matrixType sigma2(nbins, nbins);
+
+	index = 0;
+
+	// compute the gradient at a fiducial point:
+	for (int i=0; i < n; i++){
+		matrixType a1 = a0;
+		a1(i) += DeltaA;
+		sigma1 = sigma_from_a(a1, L, nbins); 
+		
+		double func1 = neglnpost(a1, G0, x0, sigma1, invN0, Z0, L, q0);
+		//cout << "post0 = " << func0 << " // post1 = " << func2 << "// post1 - post0 = " << (func2 - func0) << endl;
+		numerical_a0(i) = (func1 - func0)/DeltaA;
+
+	}
+
+	// Perturb a elements in sequence and find gradients at perturbed points:
+	// why is this being repeated again????
+	for (int j = 0; j < n; j++){
+		matrixType a1 = a0;
+		a1(j) += DeltaA;
+		sigma1 = sigma_from_a(a1, L, nbins);
+
+		double func1 = neglnpost(a1, G0, x0, sigma1, invN0, Z0, L, q0);
+
+		for (int i = 0; i < n; i++){
+			matrixType a2 = a1;
+			a2(i) += DeltaA;
+			sigma2 = sigma_from_a(a2, L, nbins);
+
+			double func2 = neglnpost(a2, G0, x0, sigma2, invN0, Z0, L, q0);
+
+			numerical_a2(i) = (func2  - func1)/DeltaA;
+
+		}
+
+		Hessian_aa_Num.row(j) = (numerical_a2 - numerical_a0)/DeltaA;
+
+	}
+
+
+
 
 
 	if (verbose == true){
-		cout << "a0: \n" 			<< a0 			<< endl;
-		cout << "sig0: \n" 			<< sigma0 		<< endl;
-		cout << "C0: \n" 			<< C0 			<< endl;
-		cout << "SigTilde0 \n" 		<< sigmatilde0 	<< endl;
-		cout << "Post0: " 			<< func0		<< endl;
-		cout << "dPost/dG = \n" 	<< numerical_G 	<< endl;
-		cout << "dPost/da = \n" 	<< numerical_a 	<< endl;
-		cout << "d2Post/dG2 = \n"	<< secondDeriv 	<< endl;
+		cout << "a0: \n" 			<< a0 				<< endl;
+		cout << "sig0: \n" 			<< sigma0 			<< endl;
+		cout << "C0: \n" 			<< C0 				<< endl;
+		cout << "SigTilde0 \n" 		<< sigmatilde0 		<< endl;
+		cout << "Post0: " 			<< func0			<< endl;
+		cout << "dPost/dG = \n" 	<< numerical_G 		<< endl;
+		cout << "dPost/da = \n" 	<< numerical_a 		<< endl;
+		cout << "d2Post/dG2 = \n"	<< secondDerivG 	<< endl;
+		cout << "Hessian_AA = \n"	<< Hessian_aa_Num	<< endl;
 	}
 
 }
