@@ -12,6 +12,7 @@
 #include <fstream>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Eigen>
+#include <boost/multi_array.hpp>
 //#include "eigenmvn.h" // for some reason a dependency on this random file was created
 
 using namespace Eigen;
@@ -20,6 +21,7 @@ using namespace std;
 // typedef std::vector<double> Vec;
 typedef Matrix<double, Dynamic, Dynamic> matrixType;
 typedef Matrix<double, Dynamic, 1> vectorType;
+typedef boost::multi_array<double, 3> NArrayType;
 
 // functions declared
 int intPow(int x, int p);
@@ -31,6 +33,9 @@ matrixType sigma_from_a(matrixType a, int L, int nbins);
 matrixType tilde(matrixType sigma, matrixType U);
 double target(matrixType sigma, matrixType G);
 matrixType perturb(matrixType G, int ii, int jj, double DeltaG);
+double OrtizFirstDerivatives(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int nbins);
+void Ortiz_matrices(matrixType& phi, NArrayType &psi, matrixType W, int m);
+double grad_G(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int q, int L, int nbins);
 
 
 // for the multivariate Gaussian

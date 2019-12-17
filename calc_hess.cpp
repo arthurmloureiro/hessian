@@ -64,6 +64,12 @@ int main(){
 	//Combine sigma with two factors of U:
 	sigmatilde0 = tilde(sigma0, U0);
 
+	matrixType phi0(nbins,nbins);
+	NArrayType psi0(boost::extents[nbins][nbins][nbins]);
+
+	// In the following, I have replaced W0 by -W0, since we want the inverse of C:
+	Ortiz_matrices(phi0, psi0, -W0, nbins);
+
 	// Covariance matrix (well, G) is random, so this is probably the right prior...
 	int q0 = 0; 
 	matrixType invN0	= 	MatrixXd::Identity(n,n); // Make the noise white
@@ -75,6 +81,7 @@ int main(){
 	cout << "\t Calculating first derivatives w.r.t. G" << endl;
 
 	matrixType numerical_G(nbins,nbins);
+	matrixType analytic_G(nbins, nbins);
 
 	for (int i=0; i < nbins; i++){
 		for (int j=0; j < nbins; j++){
@@ -83,7 +90,8 @@ int main(){
 			double func1 = neglnpost(a0, G1, x0, sigma0, invN0, Z0, L, q0);
 
 			numerical_G(i,j) = (func1 - func0)/DeltaG;
-			// this should be a vector no?
+			analytic_G(i,j) = grad_G(sigmatilde0, U0, phi0, i, j, q0, L, nbins);
+			
 		}
 	}
 
@@ -188,21 +196,20 @@ int main(){
 	}
 
 
-
-
-
 	if (verbose == true){
 		cout << "a0: \n" 			<< a0 				<< endl;
 		cout << "sig0: \n" 			<< sigma0 			<< endl;
 		cout << "C0: \n" 			<< C0 				<< endl;
 		cout << "SigTilde0 \n" 		<< sigmatilde0 		<< endl;
 		cout << "Post0: " 			<< func0			<< endl;
-		cout << "dPost/dG = \n" 	<< numerical_G 		<< endl;
-		cout << "dPost/da = \n" 	<< numerical_a 		<< endl;
-		cout << "d2Post/dG2 = \n"	<< secondDerivG 	<< endl;
-		cout << "Hessian_AA = \n"	<< Hessian_aa_Num	<< endl;
+		cout << "[N] dPost/dG = \n"	<< numerical_G 		<< endl;
+		cout << "[A] dPost/dG = \n"	<< analytic_G 		<< endl;
+		//cout << "dPost/da = \n" 	<< numerical_a 		<< endl;
+		//cout << "d2Post/dG2 = \n"	<< secondDerivG 	<< endl;
+		//cout << "Hessian_AA = \n"	<< Hessian_aa_Num	<< endl;
+		cout << "Phi0 = \n"			<< phi0 			<< endl;
+		cout << "Psi0[1][1][1] ="	<< psi0[1][1][1]	<< endl;
 	}
-
 }
 
 
@@ -233,6 +240,7 @@ double neglnpost(matrixType a, matrixType G, matrixType x, matrixType sigma, mat
 	double firstPart = (2*L+1)*(0.5)*target(sigma, G);
 	double likepart = neglnlike(a, x, invN, Z);
 	double priorpart = (2*L+1)*neglnprior(G, q);
+	
 	return firstPart + likepart + priorpart;
 }
 
@@ -242,6 +250,7 @@ double neglnlike(matrixType a, matrixType x, matrixType invN, matrixType Z){
 		in python:
 			 dx = x-np.dot(Z,a.T)
     		 neglnlike = 0.5*np.dot(dx,np.dot(invN,dx.T)) 
+    FIXME: There is a potential problem here
     */
 
 	double neglnlk;
@@ -260,7 +269,7 @@ double neglnlike(matrixType a, matrixType x, matrixType invN, matrixType Z){
 	//cout << "[dxInvNdx] rows = " << dxInvNdx.rows() << " cols = " << dxInvNdx.cols() << endl;
 	//cout << "dx*invNdx = " << dx*invNdx << endl;
 	
-	// dxInvNdx is a matrix even though it's a scalar... this (0,0) "converts" to a double
+	// dxInvNdx is a matrix even though it's a scalar... this (0,0) "converts" to a double:
 	neglnlk = 0.5*(dxInvNdx(0,0)); 
 	
 	return neglnlk;
@@ -375,4 +384,76 @@ matrixType tilde(matrixType sigma, matrixType U){
 	sigmaTilde = U.transpose()*sigU;
 
 	return sigmaTilde;
+}
+
+
+void Ortiz_matrices(matrixType& phi, NArrayType &psi, matrixType W, int m){
+	// Construct Ortiz et al's phi (2D) and psi (3D) objects
+
+	for (int i = 0; i < m; i++){
+		for (int j = 0; j < m; j++){
+			if (i==j){
+				phi(i,j) = exp(W(i));
+			} else {
+				phi(i,j) = (exp(W(i)) - exp(W(j)))/(W(i) - W(j));
+			}
+		}
+	}
+
+	// Create 3-index matrix F(,,) of Ortiz et al. eq. (25):
+
+	for (int a = 0; a < m; a++){
+		double Ea = exp(W(a));
+		for (int b = 0; b < m; b++){
+			double Eb = exp(W(b));
+			for (int c = 0; c < m; c++){
+				double Ec = exp(W(c));
+				if (a==b && a==c){
+					psi[a][b][c] = Ea/2.;
+				} else {
+					if (a==b){
+						psi[a][b][c] = ((-1 + W(a) - W(c))*Ea + Ec)/pow((W(a) - W(c)), 2.);
+					} else if (a==c) {
+						psi[a][b][c] = ((-1 + W(a) - W(b))*Ea + Eb)/pow((W(a) - W(b)), 2.);
+					} else if (b==c) {
+						psi[a][b][c] = ((-1 + W(b) - W(a))*Eb + Ea)/pow((W(a) - W(b)), 2.);
+					} else {
+						psi[a][b][c] = ( (W(b) - W(c))*Ea + (W(c) -W(a))*Eb + (W(a) - W(b))*Ec )/( (W(a) - W(b)) * (W(a) - W(c)) * (W(b) - W(c)) );
+					}
+				}
+			}
+		}
+	}
+
+}
+
+double grad_G(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int q, int L, int nbins){
+
+	double GradG;
+
+	GradG = -0.5 * (2*L+1) * OrtizFirstDerivatives(sigmaTilde, U, phi, ii, jj, nbins);
+
+	if(ii==jj){
+		GradG += 0.5*(1 - 2*q)*(2*L + 1);
+	}
+
+	return GradG;
+}
+
+double OrtizFirstDerivatives(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int nbins){
+	// Compute first derivative using Ortiz relations
+
+	double OritzDeriv = 0.0;
+
+	for (int eta = 0; eta < nbins; eta++){
+		for (int nu = 0; nu < nbins; nu++){
+			OritzDeriv += 2.0 * sigmaTilde(eta, nu) * ( U(ii, nu)*U(jj, eta) ) * phi(nu, eta);
+		}
+	}
+
+	if(ii==jj){
+		OritzDeriv *= 0.5;
+	}
+
+	return OritzDeriv;
 }
