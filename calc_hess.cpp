@@ -9,8 +9,8 @@ int main(){
 	int	nbins	=	4 ;
 	int n 		= 	L*nbins;
 
-	double DeltaG 	=	0.0001;
-	double DeltaA	=	0.0001;
+	double DeltaG 	=	0.00001;
+	double DeltaA	=	0.00001;
 
 	bool verbose = true;
 
@@ -27,8 +27,15 @@ int main(){
 	}
 
 	// trying to make G0 symmetrical:
-	matrixType G0 = G0ini + G0ini.transpose().eval();
+	//matrixType G0 = G0ini + G0ini.transpose().eval();
 	//cout << "G0 is: \n" << G0 << endl;
+
+	// for debugging:
+	matrixType G0(nbins,nbins);
+	G0 << 0.187512,  0.896667,   3.11734, -0.213435, 
+          0.896667, -0.662912, -0.994966,  -1.78307,
+          3.11734, -0.994966, 3.86366,  -1.23029,
+          -0.213435,  -1.78307,  -1.23029,  -2.01497;
 	
 	
 	matrixType sigma(nbins, nbins);
@@ -48,14 +55,24 @@ int main(){
 	
 	// Generate the m values separately (all field values are real).  
 	// am is a subpart of the whole a (corresponding to a single m, for all fields).
-	for (int m = 0; m < L; m++){
-		am.row(m) += sample();
-		//cout << " TEST MULTIVARIATE TEST TEST TEST: " << am.row(m) <<  endl;
-	}
+	// FIXME: commented out for debugging!
+	// for (int m = 0; m < L; m++){
+	// 	am.row(m) += sample();
+	// 	//cout << " TEST MULTIVARIATE TEST TEST TEST: " << am.row(m) <<  endl;
+	// }
 
-	matrixType a0;
-	a0 = am.transpose().eval();
-	a0.resize(1, n);
+	// matrixType a0;
+	// a0 = am.transpose().eval();
+	// a0.resize(1, n);
+
+	matrixType a0(1, n);
+	a0 << 9.88701,  -0.844261,    17.2041,   -2.42976,   -9.89706,    3.26295,
+                    -19.9852,    1.64855,   -10.2665,    2.36963,   -21.3809,   2.65065,
+                    -0.247704,  -0.503445,    1.48576, -0.0450003,    8.14745,  -0.235597,
+                    13.3251,   -1.88637,   -6.79681,  -0.397248,   -12.5753,     2.8178,
+                    1.2276,   -1.89707,    3.07532,    0.67641,   -13.6552,    -1.0081,
+                    -21.7761,    4.60199,   -3.98565,   -1.17426,   -6.13525,    2.01446,
+                    3.50602,    1.52371,    4.31075,   -1.19933;
 	
 	
 	// Test sigma_from_a routine at fiducial point:
@@ -77,6 +94,8 @@ int main(){
 	matrixType x0 		= 	MatrixXd::Zero(1,n); // Set data vector to zero. Why not?
 	
 	double func0 = neglnpost(a0, G0, x0, sigma0, invN0, Z0, L, q0);
+	double prior0 = neglnprior(G0, q0);
+	//cout << "TARGET: " << target(sigma0, G0) << endl;
 
 	cout << "\t Calculating first derivatives w.r.t. G" << endl;
 
@@ -197,9 +216,13 @@ int main(){
 
 
 	if (verbose == true){
+		cout << "G0: \n"			<< G0 				<< endl;
 		cout << "a0: \n" 			<< a0 				<< endl;
+		cout << "U0: \n" 			<< U0 				<< endl;
+		cout << "W0: \n" 			<< W0 				<< endl;
 		cout << "sig0: \n" 			<< sigma0 			<< endl;
 		cout << "C0: \n" 			<< C0 				<< endl;
+		cout << "InvC0: \n" 		<< invC0			<< endl;
 		cout << "SigTilde0 \n" 		<< sigmatilde0 		<< endl;
 		cout << "Post0: " 			<< func0			<< endl;
 		cout << "[N] dPost/dG = \n"	<< numerical_G 		<< endl;
@@ -294,11 +317,15 @@ double target(matrixType sigma, matrixType G){
 
 	GtoC(G, W0f, U0f, C0f, invC0f); 
 
-	double result;
+	double result = 0.0;
 	matrixType invCSig(invC0f.rows(), sigma.cols());
 	invCSig = invC0f*sigma;
 
-	result = invC0f.trace();
+	result = invCSig.trace();
+
+	// for (int i = 0; i < invCSig.cols(); i++){
+	// 	result += invCSig(i,i);
+	// }
 
 	return result;
 }
@@ -308,6 +335,7 @@ void GtoC(matrixType G, vectorType& W, matrixType& U, matrixType& C, matrixType&
 	// also C and its inverse;
 	
 	// calculating eigen-values and eig-vectors:
+	//cout << "G:     " << G << endl;
 	SelfAdjointEigenSolver<matrixType>	eigensolver(G);
 
 	if (eigensolver.info() != Success) abort();
@@ -315,6 +343,10 @@ void GtoC(matrixType G, vectorType& W, matrixType& U, matrixType& C, matrixType&
 	// Rotate:  W has eigenvalues, U eigenvectors. 
 	W = eigensolver.eigenvalues();
 	U = eigensolver.eigenvectors();
+	//U.normalize();
+
+	//cout << "U0: " << U << endl;
+	//matrixType U2 = U;
 
 	// Create the matrix e^G, by exponentiating the diagonals of W:
 	vectorType expW(W.size());
@@ -381,7 +413,7 @@ matrixType tilde(matrixType sigma, matrixType U){
 	sigU = sigma*U;
 
 	matrixType sigmaTilde(U.transpose().rows(), sigU.cols());
-	sigmaTilde = U.transpose()*sigU;
+	sigmaTilde = (U.transpose().eval())*sigU;
 
 	return sigmaTilde;
 }

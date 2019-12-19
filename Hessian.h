@@ -13,6 +13,7 @@
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/Eigen>
 #include <boost/multi_array.hpp>
+//#include <eigen3/Eigen/Eigenvalues>
 //#include "eigenmvn.h" // for some reason a dependency on this random file was created
 
 using namespace Eigen;
