@@ -37,7 +37,8 @@ matrixType perturb(matrixType G, int ii, int jj, double DeltaG);
 double OrtizFirstDerivatives(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int nbins);
 void Ortiz_matrices(matrixType& phi, NArrayType &psi, matrixType W, int m);
 double grad_G(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int q, int L, int nbins);
-
+matrixType grad_a(matrixType a, matrixType x, matrixType invC,  matrixType invN, matrixType Z, int L, int q);
+MatrixXd blkdiag(const MatrixXd& a, int count);
 
 // for the multivariate Gaussian
 // taken from: https://stackoverflow.com/questions/6142576/sample-from-multivariate-normal-gaussian-distribution-in-c,

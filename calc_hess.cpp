@@ -131,6 +131,9 @@ int main(){
 
 	}
 
+	 matrixType analytic_A = grad_a(a0, x0, invC0, invN0, Z0, L, q0);
+
+
 
 	cout << "\t Calculating the second derivatives w.r.t. G" << endl;
 
@@ -218,16 +221,17 @@ int main(){
 	if (verbose == true){
 		cout << "G0: \n"			<< G0 				<< endl;
 		cout << "a0: \n" 			<< a0 				<< endl;
-		cout << "U0: \n" 			<< U0 				<< endl;
-		cout << "W0: \n" 			<< W0 				<< endl;
-		cout << "sig0: \n" 			<< sigma0 			<< endl;
-		cout << "C0: \n" 			<< C0 				<< endl;
-		cout << "InvC0: \n" 		<< invC0			<< endl;
-		cout << "SigTilde0 \n" 		<< sigmatilde0 		<< endl;
+		//cout << "U0: \n" 			<< U0 				<< endl;
+		//cout << "W0: \n" 			<< W0 				<< endl;
+		//cout << "sig0: \n" 			<< sigma0 			<< endl;
+		//cout << "C0: \n" 			<< C0 				<< endl;
+		//cout << "InvC0: \n" 		<< invC0			<< endl;
+		//cout << "SigTilde0 \n" 		<< sigmatilde0 		<< endl;
 		cout << "Post0: " 			<< func0			<< endl;
 		cout << "[N] dPost/dG = \n"	<< numerical_G 		<< endl;
 		cout << "[A] dPost/dG = \n"	<< analytic_G 		<< endl;
-		//cout << "dPost/da = \n" 	<< numerical_a 		<< endl;
+		cout << "[N]dPost/da = \n" 	<< numerical_a 		<< endl;
+		cout << "[A]dPost/da = \n" 	<< analytic_A 		<< endl;
 		//cout << "d2Post/dG2 = \n"	<< secondDerivG 	<< endl;
 		//cout << "Hessian_AA = \n"	<< Hessian_aa_Num	<< endl;
 		cout << "Phi0 = \n"			<< phi0 			<< endl;
@@ -459,18 +463,6 @@ void Ortiz_matrices(matrixType& phi, NArrayType &psi, matrixType W, int m){
 
 }
 
-double grad_G(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int q, int L, int nbins){
-
-	double GradG;
-
-	GradG = -0.5 * (2*L+1) * OrtizFirstDerivatives(sigmaTilde, U, phi, ii, jj, nbins);
-
-	if(ii==jj){
-		GradG += 0.5*(1 - 2*q)*(2*L + 1);
-	}
-
-	return GradG;
-}
 
 double OrtizFirstDerivatives(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int nbins){
 	// Compute first derivative using Ortiz relations
@@ -488,4 +480,53 @@ double OrtizFirstDerivatives(matrixType sigmaTilde, matrixType U, matrixType phi
 	}
 
 	return OritzDeriv;
+}
+
+double grad_G(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int q, int L, int nbins){
+
+	double GradG;
+
+	GradG = -0.5 * (2*L+1) * OrtizFirstDerivatives(sigmaTilde, U, phi, ii, jj, nbins);
+
+	if(ii==jj){
+		GradG += 0.5*(1 - 2*q)*(2*L + 1);
+	}
+
+	return GradG;
+}
+
+MatrixXd blkdiag(const MatrixXd& a, int count)
+{
+    MatrixXd bdm = MatrixXd::Zero(a.rows() * count, a.cols() * count);
+    for (int i = 0; i < count; ++i)
+    {
+        bdm.block(i * a.rows(), i * a.cols(), a.rows(), a.cols()) = a;
+    }
+
+    return bdm;
+}
+
+matrixType grad_a(matrixType a, matrixType x, matrixType invC, matrixType invN, matrixType Z, int L, int q){
+	//  calculates the first derivates with respect to the alms
+
+
+	//matrixType invCfull = invC;
+	matrixType invCfull(L*invC.rows(), L*invC.cols());
+
+	invCfull = blkdiag(invC, L);
+
+	//cout << "like part, rows: " << invC.rows() << " cols: " << invC.cols() << endl;
+	//cout << "like part, rows: " << invCfull.rows() << " cols: " << invCfull.cols() << endl;
+	matrixType likepart;
+	likepart = invCfull * a.transpose().eval();
+	//cout << "like part, rows: " << likepart.rows() << " cols: " << likepart.cols() << endl;
+	// cout << "Z part, rows: " << Z.rows() << " cols: " << Z.cols() << endl;
+	// cout << "a part, rows: " << a.rows() << " cols: " << a.cols() << endl;
+	matrixType signalpart1 = x - (Z * a.transpose().eval()).transpose().eval();
+	matrixType signalpart2 = invN * signalpart1.transpose().eval();
+
+	matrixType gradA = - (Z * signalpart2) + likepart;
+	//cout << "GRADA part, rows: " << gradA.rows() << " cols: " << gradA.cols() << endl;
+	
+	return gradA.transpose().eval(); // FIXME: CHANGE THIS
 }
