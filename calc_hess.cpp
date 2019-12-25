@@ -137,8 +137,12 @@ int main(){
 
 	cout << "\t Calculating the second derivatives w.r.t. G" << endl;
 
-	matrixType secondDerivG(1, intPow(nbins, 4));
-	matrixType numerical_G0(nbins,nbins);
+	// matrixType numerical_G2(1, intPow(nbins, 4));
+	// matrixType numerical_G0(nbins,nbins);
+	// matrixType analytic_G0(nbins, nbins);
+	// matrixType analytic_G2(nbins, nbins);
+	matrixType Numerical_GG(1, intPow(nbins, 4));
+	matrixType Analytic_GG(1, intPow(nbins, 4));
 	
 	int index = 0;
 
@@ -148,20 +152,50 @@ int main(){
 			matrixType G1 = perturb(G0, i, j, DeltaG);
 
 			double func1 = neglnpost(a0, G1, x0, sigma0, invN0, Z0, L, q0);
-			numerical_G0(i,j) = (func1 - func0)/DeltaG;
+
+			// Compare finite difference with Ortiz expression:
+			double numerical_G0 = (func1 - func0)/DeltaG;
+			double analytic_G0 = grad_G(sigmatilde0, U0, phi0, i, j, q0, L, nbins);
 
 
 			// Now second derivatives.  Perturb also element G[kk,ll]:
 			for (int kk = 0; kk < nbins; kk++){
 				for (int ll = 0; ll < nbins; ll++){
 
+					// Perturb away from G0 in [kk,ll] direction:
 					matrixType G2	= 	perturb(G0, kk, ll, DeltaG);
+
+					vectorType W2(G2.rows());
+					matrixType U2(G2.rows(), G2.cols());
+					matrixType C2(G2.rows(), G2.cols());
+					matrixType invC2(G2.rows(), G2.cols());
+					GtoC(G2, W2, U2, C2, invC2); 
+					// calculates the neglogpost:
 					double func2 	= 	neglnpost(a0, G2, x0, sigma0, invN0, Z0, L, q0);
 					
+					// Perturb G2 in [kk,ll] direction. i.e. away from G0 in [i,j] and [kk,ll] directions:
 					matrixType G3	=	perturb(G2, i, j, DeltaG);
-					double func3	=	neglnpost(a0, G3, x0, sigma0, invN0, Z0, L, q0);
 
-					secondDerivG(index) = (func3 - func2)/DeltaG;
+					vectorType W3(G3.rows());
+					matrixType U3(G3.rows(), G3.cols());
+					matrixType C3(G3.rows(), G3.cols());
+					matrixType invC3(G3.rows(), G3.cols());
+					GtoC(G3, W3, U3, C3, invC3); 
+					// calculates the neglogpost:
+					double func3	=	neglnpost(a0, G3, x0, sigma0, invN0, Z0, L, q0);
+					
+					// sigmatilde gets changed since U varies:
+					matrixType sigmaTilde2 = tilde(sigma0, U2);
+					matrixType phi2(nbins,nbins);
+					NArrayType psi2(boost::extents[nbins][nbins][nbins]);
+					Ortiz_matrices(phi2, psi2, -W2, nbins);
+
+					// Compare finite-difference and Ortiz expressions for first derivative at this displaced position:
+					double numerical_G2 = (func3 - func2)/DeltaG;
+					double analytic_G2 = grad_G(sigmaTilde2, U2, phi2, i, j, q0, L, nbins);
+
+					// Compute second derivative by finite difference completely:
+					Numerical_GG(index) = (numerical_G2 - numerical_G0)/DeltaG;
 
 					index += 1;
 
@@ -230,9 +264,9 @@ int main(){
 		cout << "Post0: " 			<< func0			<< endl;
 		cout << "[N] dPost/dG = \n"	<< numerical_G 		<< endl;
 		cout << "[A] dPost/dG = \n"	<< analytic_G 		<< endl;
-		cout << "[N]dPost/da = \n" 	<< numerical_a 		<< endl;
-		cout << "[A]dPost/da = \n" 	<< analytic_A 		<< endl;
-		//cout << "d2Post/dG2 = \n"	<< secondDerivG 	<< endl;
+		cout << "[N] dPost/da = \n"	<< numerical_a 		<< endl;
+		cout << "[A] dPost/da = \n"	<< analytic_A 		<< endl;
+		cout << "[N] d2Post/dG2 = \n"<<Numerical_GG 	<< endl;
 		//cout << "Hessian_AA = \n"	<< Hessian_aa_Num	<< endl;
 		cout << "Phi0 = \n"			<< phi0 			<< endl;
 		cout << "Psi0[1][1][1] ="	<< psi0[1][1][1]	<< endl;
