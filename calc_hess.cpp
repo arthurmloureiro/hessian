@@ -197,6 +197,35 @@ int main(){
 					// Compute second derivative by finite difference completely:
 					Numerical_GG(index) = (numerical_G2 - numerical_G0)/DeltaG;
 
+					// Noting the symmetry of the matrix, changing an off-diagonal element also changes the opposite element.  The chain rule gives more derivatives in that case.  Therefore:
+					double OrtizD2;
+					
+					if (i!=j && kk!=ll){
+						double OrtizD2a = OrtizSecondDerivatives(psi0, U0, sigmatilde0, i, j, kk, ll, nbins);
+						double OrtizD2b = OrtizSecondDerivatives(psi0, U0, sigmatilde0, j, i, ll, kk, nbins);
+						double OrtizD2c = OrtizSecondDerivatives(psi0, U0, sigmatilde0, i, j, ll, kk, nbins);
+						double OrtizD2d = OrtizSecondDerivatives(psi0, U0, sigmatilde0, j, i, kk, ll, nbins);
+
+						OrtizD2 = OrtizD2a + OrtizD2b + OrtizD2c + OrtizD2d;
+
+					} else if (i==j && kk!=ll){
+						double OrtizD2a = OrtizSecondDerivatives(psi0, U0, sigmatilde0, i, j, kk, ll, nbins);
+						double OrtizD2b = OrtizSecondDerivatives(psi0, U0, sigmatilde0, i, j, ll, kk, nbins);
+						
+						OrtizD2 = OrtizD2a + OrtizD2b;
+					
+					} else if (i!=j && kk==ll){
+						double OrtizD2a = OrtizSecondDerivatives(psi0, U0, sigmatilde0, i, j, kk, ll, nbins);
+						double OrtizD2b = OrtizSecondDerivatives(psi0, U0, sigmatilde0, j, i, ll, kk, nbins);
+						
+						OrtizD2 = OrtizD2a + OrtizD2b;
+
+					} else {
+						OrtizD2 = OrtizSecondDerivatives(psi0, U0, sigmatilde0, i, j, kk, ll, nbins);
+					}
+
+					Analytic_GG(index) = (L + 0.5) * OrtizD2;
+
 					index += 1;
 
 				}
@@ -267,6 +296,7 @@ int main(){
 		cout << "[N] dPost/da = \n"	<< numerical_a 		<< endl;
 		cout << "[A] dPost/da = \n"	<< analytic_A 		<< endl;
 		cout << "[N] d2Post/dG2 = \n"<<Numerical_GG 	<< endl;
+		cout << "[A] d2Post/dG2 = \n"<<Analytic_GG	 	<< endl;
 		//cout << "Hessian_AA = \n"	<< Hessian_aa_Num	<< endl;
 		cout << "Phi0 = \n"			<< phi0 			<< endl;
 		cout << "Psi0[1][1][1] ="	<< psi0[1][1][1]	<< endl;
@@ -514,6 +544,22 @@ double OrtizFirstDerivatives(matrixType sigmaTilde, matrixType U, matrixType phi
 	}
 
 	return OritzDeriv;
+}
+
+double OrtizSecondDerivatives(NArrayType psi, matrixType U, matrixType sigmaTilde, int ii, int jj, int kk, int ll, int nbins){
+	// Second derivative from Ortiz
+	double OrtizDerivD2 = 0.0;
+
+	for (int a = 0; a < nbins; a++){
+		for (int b = 0; b < nbins; b++){
+			for (int c = 0; c < nbins; c++){
+				OrtizDerivD2 += psi[a][b][c]*( U(ii,a) * U(jj, b) * sigmaTilde(b, c) * U(ll, a) * U(kk,c) + sigmaTilde(c,a) * U(jj,a) * U(ii,b) * U(kk,b) * U(ll,c));
+			}
+		}
+	}
+
+	return OrtizDerivD2;
+
 }
 
 double grad_G(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int q, int L, int nbins){

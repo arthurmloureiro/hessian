@@ -35,6 +35,7 @@ matrixType tilde(matrixType sigma, matrixType U);
 double target(matrixType sigma, matrixType G);
 matrixType perturb(matrixType G, int ii, int jj, double DeltaG);
 double OrtizFirstDerivatives(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int nbins);
+double OrtizSecondDerivatives(NArrayType psi, matrixType U, matrixType sigmaTilde, int ii, int jj, int kk, int ll, int nbins);
 void Ortiz_matrices(matrixType& phi, NArrayType &psi, matrixType W, int m);
 double grad_G(matrixType sigmaTilde, matrixType U, matrixType phi, int ii, int jj, int q, int L, int nbins);
 matrixType grad_a(matrixType a, matrixType x, matrixType invC,  matrixType invN, matrixType Z, int L, int q);
