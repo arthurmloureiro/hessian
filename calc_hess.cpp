@@ -5,8 +5,8 @@ int main(){
 	std::cout << "trying to see if I get same results as Alan's code for the Hessian" << std::endl;
 
 	// variables:
-	int L		=	10;
-	int	nbins	=	4 ;
+	int L		=	12;
+	int	nbins	=	2 ;
 	int n 		= 	L*nbins;
 
 	double DeltaG 	=	0.00001;
@@ -32,10 +32,12 @@ int main(){
 
 	// for debugging:
 	matrixType G0(nbins,nbins);
-	G0 << 0.187512,  0.896667,   3.11734, -0.213435, 
-          0.896667, -0.662912, -0.994966,  -1.78307,
-          3.11734, -0.994966, 3.86366,  -1.23029,
-          -0.213435,  -1.78307,  -1.23029,  -2.01497;
+	// G0 << 0.187512,  0.896667,   3.11734, -0.213435, 
+ //          0.896667, -0.662912, -0.994966,  -1.78307,
+ //          3.11734, -0.994966, 3.86366,  -1.23029,
+ //          -0.213435,  -1.78307,  -1.23029,  -2.01497;
+	G0 <<  -35.6757, 0.259186,
+			0.259186, -35.8602;
 	
 	
 	matrixType sigma(nbins, nbins);
@@ -56,28 +58,30 @@ int main(){
 	// Generate the m values separately (all field values are real).  
 	// am is a subpart of the whole a (corresponding to a single m, for all fields).
 	// FIXME: commented out for debugging!
-	// for (int m = 0; m < L; m++){
-	// 	am.row(m) += sample();
+	for (int m = 0; m < L; m++){
+	 	am.row(m) += sample();
 	// 	//cout << " TEST MULTIVARIATE TEST TEST TEST: " << am.row(m) <<  endl;
-	// }
+	}
 
-	// matrixType a0;
-	// a0 = am.transpose().eval();
-	// a0.resize(1, n);
+	matrixType a0;
+	a0 = am.transpose().eval();
+	a0.resize(1, n);
 
-	matrixType a0(1, n);
-	a0 << 9.88701,  -0.844261,    17.2041,   -2.42976,   -9.89706,    3.26295,
-                    -19.9852,    1.64855,   -10.2665,    2.36963,   -21.3809,   2.65065,
-                    -0.247704,  -0.503445,    1.48576, -0.0450003,    8.14745,  -0.235597,
-                    13.3251,   -1.88637,   -6.79681,  -0.397248,   -12.5753,     2.8178,
-                    1.2276,   -1.89707,    3.07532,    0.67641,   -13.6552,    -1.0081,
-                    -21.7761,    4.60199,   -3.98565,   -1.17426,   -6.13525,    2.01446,
-                    3.50602,    1.52371,    4.31075,   -1.19933;
+	//matrixType a0(1, n);
+	// a0 << 9.88701,  -0.844261,    17.2041,   -2.42976,   -9.89706,    3.26295,
+ //                    -19.9852,    1.64855,   -10.2665,    2.36963,   -21.3809,   2.65065,
+ //                    -0.247704,  -0.503445,    1.48576, -0.0450003,    8.14745,  -0.235597,
+ //                    13.3251,   -1.88637,   -6.79681,  -0.397248,   -12.5753,     2.8178,
+ //                    1.2276,   -1.89707,    3.07532,    0.67641,   -13.6552,    -1.0081,
+ //                    -21.7761,    4.60199,   -3.98565,   -1.17426,   -6.13525,    2.01446,
+ //                    3.50602,    1.52371,    4.31075,   -1.19933;
 	
 	
 	// Test sigma_from_a routine at fiducial point:
 	matrixType sigma0(nbins, nbins);
-	sigma0 = sigma_from_a(a0, L, nbins);
+	//sigma0 = sigma_from_a(a0, L, nbins);
+	sigma0 << 2.9797e-16, -2.79581e-17,
+			-2.79581e-17,  1.41662e-16;
 	//Combine sigma with two factors of U:
 	sigmatilde0 = tilde(sigma0, U0);
 
@@ -284,12 +288,12 @@ int main(){
 	if (verbose == true){
 		cout << "G0: \n"			<< G0 				<< endl;
 		cout << "a0: \n" 			<< a0 				<< endl;
-		//cout << "U0: \n" 			<< U0 				<< endl;
-		//cout << "W0: \n" 			<< W0 				<< endl;
-		//cout << "sig0: \n" 			<< sigma0 			<< endl;
+		cout << "U0: \n" 			<< U0 				<< endl;
+		cout << "W0: \n" 			<< W0 				<< endl;
+		cout << "sig0: \n" 			<< sigma0 			<< endl;
 		//cout << "C0: \n" 			<< C0 				<< endl;
 		//cout << "InvC0: \n" 		<< invC0			<< endl;
-		//cout << "SigTilde0 \n" 		<< sigmatilde0 		<< endl;
+		cout << "SigTilde0 \n" 		<< sigmatilde0 		<< endl;
 		cout << "Post0: " 			<< func0			<< endl;
 		cout << "[N] dPost/dG = \n"	<< numerical_G 		<< endl;
 		cout << "[A] dPost/dG = \n"	<< analytic_G 		<< endl;
@@ -299,7 +303,7 @@ int main(){
 		cout << "[A] d2Post/dG2 = \n"<<Analytic_GG	 	<< endl;
 		//cout << "Hessian_AA = \n"	<< Hessian_aa_Num	<< endl;
 		cout << "Phi0 = \n"			<< phi0 			<< endl;
-		cout << "Psi0[1][1][1] ="	<< psi0[1][1][1]	<< endl;
+		cout << "Psi0[1][1][1] ="	<< psi0[0][0][0]	<< endl;
 	}
 }
 
